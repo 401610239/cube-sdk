@@ -1,5 +1,6 @@
 package com.srain.cube.image.imple;
 
+import android.content.Context;
 import android.graphics.drawable.BitmapDrawable;
 import android.support.v4.util.LruCache;
 import android.util.Log;
@@ -8,6 +9,7 @@ import com.srain.cube.image.ImageProvider;
 import com.srain.cube.image.drawable.RecyclingBitmapDrawable;
 import com.srain.cube.image.iface.ImageMemoryCache;
 import com.srain.cube.util.CLog;
+import com.srain.cube.util.Utils;
 
 public class DefaultMemoryCache implements ImageMemoryCache {
 
@@ -17,9 +19,10 @@ public class DefaultMemoryCache implements ImageMemoryCache {
 
 	private static DefaultMemoryCache sDefault;
 
-	public static DefaultMemoryCache getDefault() {
+	public static DefaultMemoryCache getDefault(Context context) {
 		if (null == sDefault) {
-			int size = Math.round(0.2f * Runtime.getRuntime().maxMemory() / 1024);
+			//int size = Math.round(0.2f * Runtime.getRuntime().maxMemory() / 1024);
+            int size = Utils.calculateMemoryCacheSize(context);
 			sDefault = new DefaultMemoryCache(size);
 		}
 		return sDefault;

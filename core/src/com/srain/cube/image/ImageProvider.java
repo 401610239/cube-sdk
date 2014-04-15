@@ -21,7 +21,9 @@ import com.srain.cube.image.iface.ImageMemoryCache;
 import com.srain.cube.image.iface.ImageResizer;
 import com.srain.cube.image.imple.DefaultMemoryCache;
 import com.srain.cube.image.imple.LruImageFileCache;
+import com.srain.cube.image.util.DefaultDownloader;
 import com.srain.cube.image.util.Downloader;
+import com.srain.cube.image.util.MarkableInputStream;
 import com.srain.cube.util.CLog;
 import com.srain.cube.util.Version;
 
@@ -57,9 +59,14 @@ public class ImageProvider {
 
 	private static ImageProvider sDefault;
 
+    private static Downloader downloader;
+
+    private final int MARKER = 65536;
+
 	public static ImageProvider getDefault(Context context) {
 		if (null == sDefault) {
-			sDefault = new ImageProvider(context, DefaultMemoryCache.getDefault(), LruImageFileCache.getDefault(context));
+			sDefault = new ImageProvider(context, DefaultMemoryCache.getDefault(context), LruImageFileCache.getDefault(context));
+            downloader = new DefaultDownloader();
 		}
 		return sDefault;
 	}
@@ -97,7 +104,7 @@ public class ImageProvider {
 	/**
 	 * Get from memory cache.
 	 * 
-	 * @param key
+	 * @param imageTask
 	 *            Unique identifier for which item to get
 	 * @return The bitmap drawable if found in cache, null otherwise
 	 */
@@ -127,7 +134,7 @@ public class ImageProvider {
 
 	/**
 	 * Get Bitmap. If not exist in file cache, will try to re-use the file cache of the other sizes.
-	 * 
+	 *
 	 * If no file cache can be used, download then save to file.
 	 */
 	public Bitmap fetchBitmapData(ImageTask imageTask, ImageResizer imageResizer) {
@@ -189,7 +196,7 @@ public class ImageProvider {
 					}
 					DiskLruCache.Editor editor = mFileCache.open(fileCacheKey);
 					if (editor != null) {
-						if (Downloader.downloadUrlToStream(url, editor.newOutputStream(0))) {
+						if (downloader.downloadUrlToStream(url, editor.newOutputStream(0))) {
 							editor.commit();
 						} else {
 							editor.abort();
@@ -219,6 +226,34 @@ public class ImageProvider {
 		}
 		return bitmap;
 	}
+
+    public Bitmap fetchBitmapDataUseStream(ImageTask imageTask, ImageResizer imageResizer) {
+        try {
+            String url = imageTask.getRemoteUrl();
+            InputStream in = downloader.getDownLoadInputStream(url);
+            if (in == null) {
+                return null;
+            }
+            MarkableInputStream markStream = new MarkableInputStream(in);
+            in = markStream;
+
+            long mark = markStream.savePosition(MARKER);
+
+            final BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inJustDecodeBounds = true;
+            BitmapFactory.decodeStream(in, null, options);
+
+            imageTask.setBitmapOriginSize(options.outWidth, options.outHeight);
+            options.inSampleSize = imageResizer.getInSampleSize(imageTask);
+            markStream.reset(mark);
+
+            return BitmapFactory.decodeStream(in, null, options);
+        }catch (IOException e) {
+
+        }
+        return null;
+    }
+
 
 	private Bitmap decodeSampledBitmapFromDescriptor(FileDescriptor fileDescriptor, ImageTask imageTask, ImageResizer imageResizer) {
 
