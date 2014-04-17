@@ -59,22 +59,29 @@ public class ImageProvider {
 
 	private static ImageProvider sDefault;
 
-    private static Downloader downloader;
+    /**
+     * download image from url
+     */
+    private static Downloader mDownloader;
 
     private final int MARKER = 65536;
 
 	public static ImageProvider getDefault(Context context) {
 		if (null == sDefault) {
 			sDefault = new ImageProvider(context, DefaultMemoryCache.getDefault(context), LruImageFileCache.getDefault(context));
-            downloader = new DefaultDownloader();
 		}
 		return sDefault;
 	}
 
 	public ImageProvider(Context context, ImageMemoryCache memoryCache, LruImageFileCache fileCache) {
-		mMemoryCache = memoryCache;
-		mFileCache = fileCache;
+        this(context, memoryCache, fileCache, new DefaultDownloader());
 	}
+
+    public ImageProvider(Context context, ImageMemoryCache memoryCache, LruImageFileCache fileCache, Downloader downloader) {
+        mMemoryCache = memoryCache;
+        mFileCache = fileCache;
+        mDownloader = downloader;
+    }
 
 	/**
 	 * Create a BitmapDrawable which can be managed in ImageProvider
@@ -196,7 +203,7 @@ public class ImageProvider {
 					}
 					DiskLruCache.Editor editor = mFileCache.open(fileCacheKey);
 					if (editor != null) {
-						if (downloader.downloadUrlToStream(url, editor.newOutputStream(0))) {
+						if (mDownloader.downloadUrlToStream(url, editor.newOutputStream(0))) {
 							editor.commit();
 						} else {
 							editor.abort();
@@ -230,7 +237,7 @@ public class ImageProvider {
     public Bitmap fetchBitmapDataUseStream(ImageTask imageTask, ImageResizer imageResizer) {
         try {
             String url = imageTask.getRemoteUrl();
-            InputStream in = downloader.getDownLoadInputStream(url);
+            InputStream in = mDownloader.getDownLoadInputStream(url);
             if (in == null) {
                 return null;
             }

@@ -23,7 +23,7 @@ public class DefaultMemoryCache implements ImageMemoryCache {
 		if (null == sDefault) {
 			//int size = Math.round(0.2f * Runtime.getRuntime().maxMemory() / 1024);
             int size = Utils.calculateMemoryCacheSize(context);
-			sDefault = new DefaultMemoryCache(size);
+			sDefault = new DefaultMemoryCache(size/1024);
 		}
 		return sDefault;
 	}

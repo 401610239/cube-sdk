@@ -17,6 +17,7 @@ import static android.os.Build.VERSION_CODES.HONEYCOMB;
  */
 public class Utils {
 
+    public static final int KITKAT = 19;
     private static String ETAO_IMAGE_CACHE = "image_cache";
     private static final int MIN_DISK_CACHE_SIZE = 5 * 1024 * 1024; // 5MB
     private static final int MAX_DISK_CACHE_SIZE = 50 * 1024 * 1024; // 50MB
