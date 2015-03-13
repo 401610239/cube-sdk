@@ -6,20 +6,20 @@
     <parent>
         <groupId>in.srain</groupId>
         <artifactId>cube-parent-for-oss</artifactId>
-        <version>1.0.1-SNAPSHOT</version>
+        <version>1.0.1</version>
     </parent>
 
     <groupId>in.srain.cube</groupId>
     <artifactId>cube-sdk</artifactId>
     <packaging>aar</packaging>
     <name>Cube SDK</name>
-    <version>1.0.42</version>
+    <version>1.0.44</version>
 
     <dependencies>
         <dependency>
             <groupId>com.google.android</groupId>
             <artifactId>android</artifactId>
-            <version>4.1.1.4</version>
+            <version>4.4.0</version>
             <scope>provided</scope>
         </dependency>
 
@@ -28,12 +28,13 @@
             <artifactId>support-v4</artifactId>
             <version>r7</version>
         </dependency>
-
         <dependency>
             <groupId>in.srain.cube</groupId>
             <artifactId>clog</artifactId>
             <version>1.0.2</version>
+            <scope>compile</scope>
         </dependency>
+
     </dependencies>
 
     <properties>

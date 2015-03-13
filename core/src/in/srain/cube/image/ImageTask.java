@@ -4,7 +4,7 @@ import android.graphics.Point;
 import android.graphics.drawable.BitmapDrawable;
 import in.srain.cube.image.iface.ImageLoadHandler;
 import in.srain.cube.util.CLog;
-import in.srain.cube.util.Debug;
+import in.srain.cube.util.CubeDebug;
 import in.srain.cube.util.Encrypt;
 
 import java.lang.ref.WeakReference;
@@ -16,7 +16,7 @@ import java.lang.ref.WeakReference;
  */
 public class ImageTask {
 
-    protected static final String LOG_TAG = Debug.DEBUG_IMAGE_LOG_TAG_TASK;
+    protected static final String LOG_TAG = CubeDebug.DEBUG_IMAGE_LOG_TAG_TASK;
     private static final Object sPoolSync = new Object();
     private static ImageTask sTop;
     private static int sPoolSize = 0;
@@ -26,13 +26,24 @@ public class ImageTask {
     private static int sId = 0;
 
     private final static String SIZE_SP = "_";
-    private final static int STATUS_PRE_LOAD = 0x01;
-    private final static int STATUS_LOADING = 0x02;
-    private final static int STATUS_DONE = 0x04;
-    private final static int STATUS_CANCELED = 0x08;
-    private final static int STATUS_FAIL = 0x10;
 
+    // 0000 0111
+    private static final int ERROR_CODE_MASK = 0x07;
+
+    // error code, max 0x07
     public final static int ERROR_NETWORK = 0x01;
+    public final static int ERROR_BAD_FORMAT = 0x02;
+
+    /**
+     * bits:
+     * 1 error-code
+     * 2 error-code
+     * 3 error-code
+     * 4 loading
+     * 5 pre-load
+     */
+    private final static int STATUS_LOADING = 0x01 << 3;
+    private final static int STATUS_PRE_LOAD = 0x02 << 3;
 
     private int mFlag = 0;
     protected int mId = 0;
@@ -58,7 +69,10 @@ public class ImageTask {
 
     ImageTask next;
 
+    private boolean mHasRecycled = false;
+
     protected void clearForRecycle() {
+        mHasRecycled = true;
         mFlag = 0;
 
         mOriginUrl = null;
@@ -84,10 +98,11 @@ public class ImageTask {
                 sTop = m.next;
                 m.next = null;
                 sPoolSize--;
+                m.mHasRecycled = false;
+                if (CubeDebug.DEBUG_IMAGE) {
+                    CLog.d(LOG_TAG, "%s, obtain reused, pool remain: %d", m, sPoolSize);
+                }
                 return m;
-            }
-            if (Debug.DEBUG_IMAGE) {
-                CLog.d(LOG_TAG, "obtain, pool remain: %d", sPoolSize);
             }
         }
         return null;
@@ -105,15 +120,26 @@ public class ImageTask {
                 next = sTop;
                 sTop = this;
                 sPoolSize++;
-            }
-            if (Debug.DEBUG_IMAGE) {
-                CLog.d(LOG_TAG, "recycle, pool remain: %d", sPoolSize);
+                if (CubeDebug.DEBUG_IMAGE) {
+                    CLog.d(LOG_TAG, "%s is put to recycle poll, pool size: %d", this, sPoolSize);
+                } else {
+                    if (CubeDebug.DEBUG_IMAGE) {
+                        CLog.d(LOG_TAG, "%s is not recycled, the poll is full: %d", this, sPoolSize);
+                    }
+                }
             }
         }
     }
 
     public ImageTask renew() {
-        mId = ++sId;
+        if (CubeDebug.DEBUG_IMAGE) {
+            int lastId = mId;
+            mId = ++sId;
+            CLog.d(LOG_TAG, "%s, renew: %s => %s", this, lastId, mId);
+        } else {
+            mId = ++sId;
+        }
+        mStr = null;
         if (ImagePerformanceStatistics.sample(mId)) {
             mImageTaskStatistics = new ImageTaskStatistics();
         }
@@ -149,16 +175,13 @@ public class ImageTask {
 
     /**
      * In some situations, we may store the same image in some different servers. So the same image will related to some different urls.
-     * <p/>
      * Generate the identity url according your situation.
-     * <p/>
      * {@link #mIdentityUrl}
      *
      * @return
      */
     protected String generateIdentityUrl(String originUrl) {
         return originUrl;
-
     }
 
     /**
@@ -271,6 +294,11 @@ public class ImageTask {
         }
     }
 
+    /**
+     * When loading from network
+     *
+     * @param handler
+     */
     public void onLoading(ImageLoadHandler handler) {
         mFlag = mFlag | STATUS_LOADING;
 
@@ -292,21 +320,38 @@ public class ImageTask {
     }
 
     /**
+     * notify loading
+     *
+     * @param handler
+     * @param imageView
+     */
+    public void notifyLoading(ImageLoadHandler handler, CubeImageView imageView) {
+        if (handler == null || imageView == null) {
+            return;
+        }
+        handler.onLoading(this, imageView);
+    }
+
+    /**
      * Will be called when begin load image data from dish or network
      *
      * @param drawable
      */
-    public void onLoadFinish(BitmapDrawable drawable, ImageLoadHandler handler) {
+    public void onLoadTaskFinish(BitmapDrawable drawable, ImageLoadHandler handler) {
 
         mFlag &= ~STATUS_LOADING;
-        mFlag |= STATUS_DONE;
 
         if (null == handler) {
             return;
         }
+        int errorCode = mFlag & ERROR_CODE_MASK;
+        if (errorCode > 0) {
+            onLoadError(errorCode, handler);
+            return;
+        }
 
         if (null != mImageTaskStatistics) {
-            mImageTaskStatistics.showBegin();
+            mImageTaskStatistics.s5_beforeShow();
         }
         if (mFirstImageViewHolder == null) {
             handler.onLoadFinish(this, null, drawable);
@@ -321,18 +366,27 @@ public class ImageTask {
             } while ((holder = holder.mNext) != null);
         }
         if (null != mImageTaskStatistics) {
-            mImageTaskStatistics.showComplete(ImageProvider.getBitmapSize(drawable));
+            mImageTaskStatistics.s6_afterShow(ImageProvider.getBitmapSize(drawable));
+            ImagePerformanceStatistics.onImageLoaded(this, mImageTaskStatistics);
         }
     }
 
-    public void onCancel() {
-        mFlag &= ~STATUS_LOADING;
-        mFlag |= STATUS_CANCELED;
+    public void onLoadTaskCancel() {
     }
 
-    public void onLoadError(int reason, ImageLoadHandler handler) {
-        mFlag &= ~STATUS_LOADING;
-        mFlag |= STATUS_FAIL;
+    public void setError(int errorCode) {
+        if (errorCode > ERROR_CODE_MASK) {
+            throw new IllegalArgumentException("error code undefined.");
+        }
+
+        // clear old error flag
+        mFlag = (mFlag & ~ERROR_CODE_MASK);
+
+        // set current error flag
+        mFlag |= errorCode;
+    }
+
+    private void onLoadError(int reason, ImageLoadHandler handler) {
         if (mFirstImageViewHolder == null) {
             handler.onLoadError(this, null, reason);
         } else {
@@ -344,7 +398,6 @@ public class ImageTask {
                     handler.onLoadError(this, imageView, reason);
                 }
             } while ((holder = holder.mNext) != null);
-
         }
     }
 
@@ -448,7 +501,7 @@ public class ImageTask {
     @Override
     public String toString() {
         if (mStr == null) {
-            mStr = String.format("%s %sx%s", mId, mRequestSize.x, mRequestSize.y);
+            mStr = String.format("[ImageTask@%s %s %sx%s %s]", Integer.toHexString(hashCode()), mId, mRequestSize.x, mRequestSize.y, mHasRecycled);
         }
         return mStr;
     }

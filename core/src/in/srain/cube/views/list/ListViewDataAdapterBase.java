@@ -5,10 +5,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import in.srain.cube.util.CLog;
-import in.srain.cube.util.Debug;
-
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Modifier;
+import in.srain.cube.util.CubeDebug;
 
 /**
  * A adapter using View Holder to display the item of a list view;
@@ -18,7 +15,7 @@ import java.lang.reflect.Modifier;
  */
 public abstract class ListViewDataAdapterBase<ItemDataType> extends BaseAdapter {
 
-    private static String LOG_TAG = "cube_list";
+    private static final String LOG_TAG = "cube-list";
 
     protected ViewHolderCreator<ItemDataType> mViewHolderCreator;
     protected ViewHolderCreator<ItemDataType> mLazyCreator;
@@ -43,40 +40,8 @@ public abstract class ListViewDataAdapterBase<ItemDataType> extends BaseAdapter 
         mViewHolderCreator = viewHolderCreator;
     }
 
-    public void setViewHolderClass(final Object enclosingInstance, final Class<?> cls) {
-        if (cls == null) {
-            throw new IllegalArgumentException("ViewHolderClass is null.");
-        }
-        mLazyCreator = new ViewHolderCreator<ItemDataType>() {
-            @Override
-            public ViewHolderBase<ItemDataType> createViewHolder() {
-                Object object = null;
-                try {
-                    // top class
-                    if (cls.getEnclosingClass() == null) {
-                        Constructor<?> constructor = cls.getDeclaredConstructor();
-                        constructor.setAccessible(true);
-                        object = constructor.newInstance();
-                    } else {
-                        if (Modifier.isStatic(cls.getModifiers())) {
-                            Constructor<?> constructor = cls.getDeclaredConstructor();
-                            constructor.setAccessible(true);
-                            object = constructor.newInstance();
-                        } else {
-                            Constructor<?> constructor = cls.getDeclaredConstructor(enclosingInstance.getClass());
-                            constructor.setAccessible(true);
-                            object = constructor.newInstance(enclosingInstance);
-                        }
-                    }
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                }
-                if (object == null || !(object instanceof ViewHolderBase)) {
-                    throw new IllegalArgumentException("ViewHolderClass can not be initiated");
-                }
-                return (ViewHolderBase<ItemDataType>) object;
-            }
-        };
+    public void setViewHolderClass(final Object enclosingInstance, final Class<?> cls, final Object... args) {
+        mLazyCreator = LazyViewHolderCreator.create(enclosingInstance, cls, args);
     }
 
     private ViewHolderBase<ItemDataType> createViewHolder() {
@@ -99,7 +64,7 @@ public abstract class ListViewDataAdapterBase<ItemDataType> extends BaseAdapter 
     @SuppressWarnings("unchecked")
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
-        if (Debug.DEBUG_LIST) {
+        if (CubeDebug.DEBUG_LIST) {
             CLog.d(LOG_TAG, "getView %s", position);
         }
         ItemDataType itemData = getItem(position);

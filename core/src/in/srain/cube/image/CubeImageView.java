@@ -34,6 +34,7 @@ public class CubeImageView extends ImageView {
     private ImageReuseInfo mImageReuseInfo;
     private ImageTask mImageTask;
     private boolean mClearWhenDetached = true;
+    private String mStr;
 
     public CubeImageView(Context context) {
         super(context);
@@ -41,6 +42,29 @@ public class CubeImageView extends ImageView {
 
     public CubeImageView(Context context, AttributeSet attrs) {
         super(context, attrs);
+    }
+
+    public CubeImageView(Context context, AttributeSet attrs, int defStyle) {
+        super(context, attrs, defStyle);
+    }
+
+    /**
+     * Notifies the drawable that it's displayed state has changed.
+     *
+     * @param drawable
+     * @param isDisplayed
+     */
+    private static void notifyDrawable(Drawable drawable, final boolean isDisplayed) {
+        if (drawable instanceof RecyclingBitmapDrawable) {
+            // The drawable is a CountingBitmapDrawable, so notify it
+            ((RecyclingBitmapDrawable) drawable).setIsDisplayed(isDisplayed);
+        } else if (drawable instanceof LayerDrawable) {
+            // The drawable is a LayerDrawable, so recurse on each layer
+            LayerDrawable layerDrawable = (LayerDrawable) drawable;
+            for (int i = 0, z = layerDrawable.getNumberOfLayers(); i < z; i++) {
+                notifyDrawable(layerDrawable.getDrawable(i), isDisplayed);
+            }
+        }
     }
 
     public void setClearDrawableWhenDetached(boolean clearWhenDetached) {
@@ -113,25 +137,6 @@ public class CubeImageView extends ImageView {
         clearLoadTask();
     }
 
-    /**
-     * Notifies the drawable that it's displayed state has changed.
-     *
-     * @param drawable
-     * @param isDisplayed
-     */
-    private static void notifyDrawable(Drawable drawable, final boolean isDisplayed) {
-        if (drawable instanceof RecyclingBitmapDrawable) {
-            // The drawable is a CountingBitmapDrawable, so notify it
-            ((RecyclingBitmapDrawable) drawable).setIsDisplayed(isDisplayed);
-        } else if (drawable instanceof LayerDrawable) {
-            // The drawable is a LayerDrawable, so recurse on each layer
-            LayerDrawable layerDrawable = (LayerDrawable) drawable;
-            for (int i = 0, z = layerDrawable.getNumberOfLayers(); i < z; i++) {
-                notifyDrawable(layerDrawable.getDrawable(i), isDisplayed);
-            }
-        }
-    }
-
     public void onLoadFinish() {
     }
 
@@ -155,15 +160,15 @@ public class CubeImageView extends ImageView {
         loadImage(imageLoader, url, specifiedSize, specifiedSize, imageReuseInfo);
     }
 
-    public void loadImage(ImageLoader imageLoader, String url, int specifiedWidth, int specifieHeight) {
-        loadImage(imageLoader, url, specifiedWidth, specifieHeight, null);
+    public void loadImage(ImageLoader imageLoader, String url, int specifiedWidth, int specifiedHeight) {
+        loadImage(imageLoader, url, specifiedWidth, specifiedHeight, null);
     }
 
-    public void loadImage(ImageLoader imageLoader, String url, int specifiedWidth, int specifieHeight, ImageReuseInfo imageReuseInfo) {
+    public void loadImage(ImageLoader imageLoader, String url, int specifiedWidth, int specifiedHeight, ImageReuseInfo imageReuseInfo) {
         mImageLoader = imageLoader;
         mUrl = url;
         mSpecifiedWidth = specifiedWidth;
-        mSpecifiedHeight = specifieHeight;
+        mSpecifiedHeight = specifiedHeight;
         mImageReuseInfo = imageReuseInfo;
         tryLoadImage();
     }
@@ -177,6 +182,8 @@ public class CubeImageView extends ImageView {
     private void tryLoadImage() {
 
         if (TextUtils.isEmpty(mUrl)) {
+            setImageDrawable(null);
+            mImageTask = null;
             return;
         }
 
@@ -230,4 +237,11 @@ public class CubeImageView extends ImageView {
         super.onDraw(canvas);
     }
 
+    @Override
+    public String toString() {
+        if (mStr == null) {
+            mStr = "[CubeImageView@" + Integer.toHexString(hashCode()) + ']';
+        }
+        return mStr;
+    }
 }

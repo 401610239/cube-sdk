@@ -14,6 +14,11 @@ public class Query<T> implements ICacheAble<T> {
 
     private QueryHandler mHandler;
     private CacheManager mCacheManager;
+    private long mCacheTime = 86400;
+    private String mCacheKey;
+    private boolean mUseCacheAnyway = false;
+    private boolean mDisable = false;
+    private String mInitAssertPath = null;
 
     public Query(CacheManager cacheManager) {
         mCacheManager = cacheManager;
@@ -25,6 +30,11 @@ public class Query<T> implements ICacheAble<T> {
         } else {
             queryFail();
         }
+    }
+
+    public Query<T> setCacheTime(long time) {
+        mCacheTime = time;
+        return this;
     }
 
     private void queryFail() {
@@ -41,26 +51,40 @@ public class Query<T> implements ICacheAble<T> {
 
     @Override
     public long getCacheTime() {
-        if (mHandler != null) {
-            return mHandler.getCacheTime();
-        }
-        return 0;
+        return mCacheTime;
     }
 
     @Override
     public String getCacheKey() {
-        if (mHandler != null) {
-            return mHandler.getCacheKey();
-        }
-        return null;
+        return mCacheKey;
+    }
+
+    @Override
+    public Query<T> setCacheKey(String key) {
+        mCacheKey = key;
+        return this;
+    }
+
+    @Override
+    public Query<T> setUseCacheAnyway(boolean use) {
+        mUseCacheAnyway = use;
+        return this;
+    }
+
+    @Override
+    public boolean useCacheAnyway() {
+        return mUseCacheAnyway;
+    }
+
+    @Override
+    public Query<T> setAssertInitDataPath(String path) {
+        mInitAssertPath = path;
+        return this;
     }
 
     @Override
     public String getAssertInitDataPath() {
-        if (mHandler != null) {
-            return mHandler.getAssertInitDataPath();
-        }
-        return null;
+        return mInitAssertPath;
     }
 
     @Override
@@ -85,7 +109,7 @@ public class Query<T> implements ICacheAble<T> {
         }
 
         if (outOfDate) {
-            if (mHandler != null && mHandler.useCacheAnyway()) {
+            if (mHandler != null && mUseCacheAnyway) {
                 mHandler.onQueryFinish(RequestType.USE_CACHE_ANYWAY, cacheData, outOfDate);
             }
         } else {
@@ -104,7 +128,7 @@ public class Query<T> implements ICacheAble<T> {
     }
 
     @Override
-    public void createDataForCache(CacheManager cacheManager) {
+    public void onNoCacheData(CacheManager cacheManager) {
         if (mHandler != null) {
             continueAfterCreateData(mHandler.createDataForCache(this));
         } else {
@@ -113,7 +137,13 @@ public class Query<T> implements ICacheAble<T> {
     }
 
     @Override
+    public Query<T> setDisableCache(boolean disable) {
+        mDisable = disable;
+        return this;
+    }
+
+    @Override
     public boolean cacheIsDisabled() {
-        return mHandler != null && mHandler.disableCache();
+        return mHandler != null && mDisable;
     }
 }

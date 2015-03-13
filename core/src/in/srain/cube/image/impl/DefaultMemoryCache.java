@@ -6,23 +6,13 @@ import android.util.Log;
 import in.srain.cube.image.ImageProvider;
 import in.srain.cube.image.drawable.RecyclingBitmapDrawable;
 import in.srain.cube.image.iface.ImageMemoryCache;
-import in.srain.cube.util.Debug;
+import in.srain.cube.util.CubeDebug;
 
 public class DefaultMemoryCache implements ImageMemoryCache {
 
-    protected static final boolean DEBUG = Debug.DEBUG_IMAGE;
-    protected static final String LOG_TAG = Debug.DEBUG_IMAGE_LOG_TAG_PROVIDER;
+    protected static final boolean DEBUG = CubeDebug.DEBUG_IMAGE;
+    protected static final String LOG_TAG = CubeDebug.DEBUG_IMAGE_LOG_TAG_PROVIDER;
     private LruCache<String, BitmapDrawable> mMemoryCache;
-
-    private static DefaultMemoryCache sDefault;
-
-    public static DefaultMemoryCache getDefault() {
-        if (null == sDefault) {
-            int size = Math.round(0.2f * Runtime.getRuntime().maxMemory() / 1024);
-            sDefault = new DefaultMemoryCache(size);
-        }
-        return sDefault;
-    }
 
     public DefaultMemoryCache(int cacheSizeInKB) {
 
@@ -53,7 +43,7 @@ public class DefaultMemoryCache implements ImageMemoryCache {
              */
             @Override
             protected int sizeOf(String key, BitmapDrawable value) {
-                final int bitmapSize = ImageProvider.getBitmapSize(value) / 1024;
+                final int bitmapSize = (int) (ImageProvider.getBitmapSize(value) / 1024);
                 return bitmapSize == 0 ? 1 : bitmapSize;
             }
         };

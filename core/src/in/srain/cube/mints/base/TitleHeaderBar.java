@@ -18,7 +18,7 @@ public class TitleHeaderBar extends RelativeLayout {
     private RelativeLayout mRightViewContainer;
     private RelativeLayout mCenterViewContainer;
 
-    private String title;
+    private String mTitle;
 
     public TitleHeaderBar(Context context) {
         this(context, null);
@@ -30,12 +30,16 @@ public class TitleHeaderBar extends RelativeLayout {
 
     public TitleHeaderBar(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
-        LayoutInflater.from(context).inflate(R.layout.cube_mints_base_header_bar_title, this);
+        LayoutInflater.from(context).inflate(getHeaderViewLayoutId(), this);
         mLeftViewContainer = (RelativeLayout) findViewById(R.id.ly_title_bar_left);
         mCenterViewContainer = (RelativeLayout) findViewById(R.id.ly_title_bar_center);
         mRightViewContainer = (RelativeLayout) findViewById(R.id.ly_title_bar_right);
         mLeftReturnImageView = (ImageView) findViewById(R.id.iv_title_bar_left);
         mCenterTitleTextView = (TextView) findViewById(R.id.tv_title_bar_title);
+    }
+
+    protected int getHeaderViewLayoutId() {
+        return R.layout.cube_mints_base_header_bar_title;
     }
 
     public ImageView getLeftImageView() {
@@ -47,8 +51,12 @@ public class TitleHeaderBar extends RelativeLayout {
     }
 
     public void setTitle(String title) {
-        this.title = title;
+        mTitle = title;
         mCenterTitleTextView.setText(title);
+    }
+
+    public String getTitle() {
+        return mTitle;
     }
 
     private RelativeLayout.LayoutParams makeLayoutParams(View view) {

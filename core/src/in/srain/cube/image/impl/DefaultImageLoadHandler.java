@@ -8,13 +8,13 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.TransitionDrawable;
-import android.util.Log;
 import android.view.ViewGroup;
 import in.srain.cube.image.CubeImageView;
 import in.srain.cube.image.ImageTask;
 import in.srain.cube.image.drawable.RoundedDrawable;
 import in.srain.cube.image.iface.ImageLoadHandler;
-import in.srain.cube.util.Debug;
+import in.srain.cube.util.CLog;
+import in.srain.cube.util.CubeDebug;
 import in.srain.cube.util.Version;
 
 /**
@@ -26,11 +26,11 @@ import in.srain.cube.util.Version;
  */
 public class DefaultImageLoadHandler implements ImageLoadHandler {
 
-    private final static boolean DEBUG = Debug.DEBUG_IMAGE;
-    private final static String LOG_TAG = Debug.DEBUG_IMAGE_LOG_TAG;
-    private final static String MSG_LOADING = "%s onLoading";
-    private final static String MSG_LOAD_ERROR = "%s load error";
-    private final static String MSG_LOAD_FINISH = "%s onLoadFinish %s %s %s %s";
+    private final static boolean DEBUG = CubeDebug.DEBUG_IMAGE;
+    private final static String LOG_TAG = CubeDebug.DEBUG_IMAGE_LOG_TAG;
+    private final static String MSG_LOADING = "%s => %s handler on loading";
+    private final static String MSG_LOAD_ERROR = "%s => %s handler on load error";
+    private final static String MSG_LOAD_FINISH = "%s => %s handler on load finish: %s %s %s %s";
 
     private Context mContext;
     private final static int DISPLAY_FADE_IN = 0x01;
@@ -48,10 +48,8 @@ public class DefaultImageLoadHandler implements ImageLoadHandler {
 
     public DefaultImageLoadHandler(Context context) {
         mContext = context;
-        if (Version.hasHoneycomb()) {
-            int color = Color.parseColor("#fafafa");
-            mLoadingDrawable = new ColorDrawable(color);
-        }
+        mLoadingDrawable = new ColorDrawable(0xfff1f1f1);
+        mErrorDrawable = new ColorDrawable(Color.RED);
     }
 
     /**
@@ -139,7 +137,7 @@ public class DefaultImageLoadHandler implements ImageLoadHandler {
             return;
         }
         if (DEBUG) {
-            Log.d(LOG_TAG, String.format(MSG_LOADING, imageTask));
+            CLog.d(LOG_TAG, MSG_LOADING, imageTask, imageView);
         }
         if (Version.hasHoneycomb()) {
             if (mLoadingDrawable != null && imageView != null && imageView.getDrawable() != mLoadingDrawable) {
@@ -153,14 +151,17 @@ public class DefaultImageLoadHandler implements ImageLoadHandler {
     @Override
     public void onLoadError(ImageTask imageTask, CubeImageView imageView, int errorCode) {
         if (DEBUG) {
-            Log.d(LOG_TAG, String.format(MSG_LOAD_ERROR, imageTask));
+            CLog.d(LOG_TAG, MSG_LOAD_ERROR, imageTask, imageView);
         }
-        if (Version.hasHoneycomb()) {
-            if (mErrorDrawable != null && imageView != null && imageView.getDrawable() != mErrorDrawable) {
-                imageView.setImageDrawable(mErrorDrawable);
+        if (imageView != null) {
+            if (Version.hasHoneycomb()) {
+                if (mErrorDrawable != null && imageView != null && imageView.getDrawable() != mErrorDrawable) {
+                    imageView.setImageDrawable(mErrorDrawable);
+                }
+            } else {
+                imageView.setImageDrawable(null);
             }
-        } else {
-            imageView.setImageDrawable(null);
+            imageView.setImageDrawable(mErrorDrawable);
         }
     }
 
@@ -191,11 +192,11 @@ public class DefaultImageLoadHandler implements ImageLoadHandler {
 
             // RoundedDrawable will not recycle automatically when API level is lower than 11
             if ((mDisplayTag & DISPLAY_ROUNDED) == DISPLAY_ROUNDED && Version.hasHoneycomb()) {
-                d = new RoundedDrawable(drawable.getBitmap(), mCornerRadius, 0);
+                d = new RoundedDrawable(drawable.getBitmap(), mCornerRadius);
             }
             if ((mDisplayTag & DISPLAY_FADE_IN) == DISPLAY_FADE_IN) {
                 int loadingColor = android.R.color.transparent;
-                if (mLoadingColor != -1) {
+                if (mLoadingColor != -1 && (mDisplayTag & DISPLAY_ROUNDED) != DISPLAY_ROUNDED) {
                     loadingColor = mLoadingColor;
                 }
                 final TransitionDrawable td = new TransitionDrawable(new Drawable[]{new ColorDrawable(loadingColor), d});
@@ -210,7 +211,8 @@ public class DefaultImageLoadHandler implements ImageLoadHandler {
                         w = oldDrawable.getIntrinsicWidth();
                         h = oldDrawable.getIntrinsicHeight();
                     }
-                    Log.d(LOG_TAG, String.format(MSG_LOAD_FINISH, imageTask, w, h, drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight()));
+                    CLog.d(LOG_TAG, MSG_LOAD_FINISH,
+                            imageTask, imageView, w, h, drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight());
                 }
                 imageView.setImageDrawable(drawable);
             }

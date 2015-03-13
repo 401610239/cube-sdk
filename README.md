@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/etao-open-source/cube-sdk.svg?branch=dev)](https://travis-ci.org/etao-open-source/cube-sdk)
+
 ##[中文说明](https://github.com/etao-open-source/cube-sdk/blob/master/README-cn.md)
 
 
@@ -13,36 +15,82 @@ http://cube-sdk.liaohuqiu.net
 
 ### Import to your project
 
-Cube-SDK has been pushed to Maven Central, both in `aar` and `apklib` format.
+#### Repository
 
-##### Using in pom.xml
+The latest version: `1.0.44`, has been published to: https://oss.sonatype.org/content/repositories/snapshots, in gradle:
+
+*   gradle
+
+    ```
+    maven {
+        url 'https://oss.sonatype.org/content/repositories/snapshots'
+    }
+    ```
+    
+*   pom.xml
+    
+    ```
+    <repository>
+        <id>oss-snapshots</id>
+        <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        <releases>
+            <enabled>false</enabled>
+        </releases>
+        <snapshots>
+            <enabled>true</enabled>
+        </snapshots>
+    </repository>
+    ```
+
+The stable version: `1.0.42`, https://oss.sonatype.org/content/repositories/releases, in gradle:
+
+
+*   gradle
+
+    ```
+    mavenCentral()
+    ```
+
+#### dependency
+
+*   pom.xml, latest version:
 
 ```xml
 <dependency>
     <groupId>in.srain.cube</groupId>
     <artifactId>cube-sdk</artifactId>
-    <type>apklib</type>
-    <version>1.0.42</version>
+    <type>aar</type>
+    <!-- or apklib format, if you want -->
+    <!-- <type>apklib</type> -->
+    <version>1.0.44</version>
 </dependency>
 ```
 
-or:
+*  pom.xml, stable version:
 
-```
+```xml
 <dependency>
     <groupId>in.srain.cube</groupId>
     <artifactId>cube-sdk</artifactId>
     <type>aar</type>
+    <!-- or apklib format, if you want -->
+    <!-- <type>apklib</type> -->
     <version>1.0.42</version>
 </dependency>
 ```
 
-###### Gradle / Android Studio
+*   gradle, latest version:
 
-``` gradle 
+```
+compile 'in.srain.cube:cube-sdk:1.0.44@aar'
+```
+
+*   gradle, stable version:
+
+```
 compile 'in.srain.cube:cube-sdk:1.0.42@aar'
-`````
+```
 
 ###### Eclipse
 
-Load the content into you eclipse, it's library project. Then use it in your application project.
+Load the content into you eclipse, it's a library project. Then use it in your application project.
